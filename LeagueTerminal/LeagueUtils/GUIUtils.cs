@@ -24,7 +24,7 @@ namespace LeagueTerminal.LeagueUtils
 
 
 
-        static private RiotApi Api = RiotApi.GetDevelopmentInstance("RGAPI-37051223-8fac-4b1e-b523-73371cb41e71");
+        static private RiotApi Api = RiotApi.GetDevelopmentInstance("RGAPI-7af2d001-4e6e-46ce-b243-6f1b3c3cb079");
 
         static private string LatestVersion { get; set; }
         static private TextField UsernameTextField { get; set; }
@@ -63,7 +63,7 @@ namespace LeagueTerminal.LeagueUtils
             myView.Add(menu);
 
 
-
+            SearchRegion = Region.Eune;
             SetupMatchHistoryView();
             SetupSummonerInfo();
             SetupMatchInfo();
@@ -245,6 +245,8 @@ namespace LeagueTerminal.LeagueUtils
 
         private static void RedrawUserInfo(Summoner summoner, List<LeagueEntry> summonerLeagues)
         {
+            SummonerInfoView.RemoveAll();
+
             var label = new Label("Summoner Name: " + summoner.Name)
             {
                 X = Pos.Percent(0),
@@ -296,8 +298,23 @@ namespace LeagueTerminal.LeagueUtils
                 };
                 prev = queueType;
                 SummonerInfoView.Add(queueType);
-                
             }
+
+            var masteriesArray = LeagueUtilities.GetTopPlayedChampions(Api, summoner, Champions);
+
+            foreach (string mastery in masteriesArray)
+            {
+                var masteryInfo = new Label(mastery)
+                {
+                    X = Pos.Percent(0),
+                    Y = prev.Y + 1,
+                    Width = Dim.Fill(),
+                    Height = 1
+                };
+                prev = masteryInfo;
+                SummonerInfoView.Add(masteryInfo);
+            }
+
         }
 
         private static void RedrawMatchHistory(List<MatchHistoryElement> matchHistoryElements)
