@@ -24,12 +24,13 @@ namespace LeagueTerminal.LeagueUtils
 
 
 
-        static private RiotApi Api = RiotApi.GetDevelopmentInstance("RGAPI-7af2d001-4e6e-46ce-b243-6f1b3c3cb079");
+        static private RiotApi Api = RiotApi.GetDevelopmentInstance("RGAPI-277a443b-4981-4e26-bde2-dfbcf586fe0a");
 
         static private string LatestVersion { get; set; }
         static private TextField UsernameTextField { get; set; }
 
-        static private string SummonerName { get; set; }
+        
+        static private Summoner PlayerSummoner { get; set; }
 
         static private ListView MatchHistoryListView { get; set; }
 
@@ -42,7 +43,7 @@ namespace LeagueTerminal.LeagueUtils
         {
             LatestVersion = Api.DataDragon.Versions.GetAllAsync().Result[0];
             Champions = Api.DataDragon.Champions.GetAllAsync(LatestVersion).Result.Champions;
-
+            var maps = Api.DataDragon.Maps.GetAllAsync(LatestVersion).Result;
             TopView = myView;
 
             // Creates a menubar, the item "New" has a help menu.
@@ -185,10 +186,10 @@ namespace LeagueTerminal.LeagueUtils
         private static void SearchButtonClickedHandler()
         {
 
-            Summoner summoner = null;
+            PlayerSummoner = null;
             try
             {
-                summoner = Api.Summoner.GetSummonerByNameAsync(SearchRegion, UsernameTextField.Text.ToString()).Result;
+                PlayerSummoner = Api.Summoner.GetSummonerByNameAsync(SearchRegion, UsernameTextField.Text.ToString()).Result;
             }
             catch (Exception e)
             {
@@ -196,35 +197,31 @@ namespace LeagueTerminal.LeagueUtils
                 return;
             }
             
-            var summId = summoner.AccountId;
 
-            var summonerLeagues = Api.League.GetLeagueEntriesBySummonerAsync(SearchRegion, summoner.Id).Result;
+            var summonerLeagues = Api.League.GetLeagueEntriesBySummonerAsync(SearchRegion, PlayerSummoner.Id).Result;
             MatchList matchData = null;
             try
             {
-                matchData = Api.Match.GetMatchListAsync(SearchRegion, summId).Result;
+                matchData = Api.Match.GetMatchListAsync(SearchRegion, PlayerSummoner.AccountId).Result;
             }
             catch(RiotSharpException e)
             {
                 DrawInfoDialog("This user hasn't play any games this season.");
                 return;
             }
-                List<MatchHistoryElement> list = new List<MatchHistoryElement>();
+            List<MatchHistoryElement> list = new List<MatchHistoryElement>();
 
             Dictionary<Participant, string> dic = new Dictionary<Participant, string>();
             for (int i = 0; i < 10; i++)
             {
 
                 var matchReference = matchData.Matches[i];
-                var match = Api.Match.GetMatchAsync(SearchRegion, matchReference.GameId).Result;
 
-                // Get participant stats object of summoner (imaqtpie)
-                var particpantsId = match.ParticipantIdentities.Single(x => x.Player.AccountId == summoner.AccountId);
-                var participant = match.Participants.Single(x => x.ParticipantId == particpantsId.ParticipantId);
+
+                list.Add(new MatchHistoryElement(matchReference, Champions));
 
                 // Do stuff with stats
 
-                list.Add(new MatchHistoryElement(participant));
             }
 
             //List<ChampionMastery> championMasteries;
@@ -238,16 +235,16 @@ namespace LeagueTerminal.LeagueUtils
             //    return;
             //}
 
-            RedrawUserInfo(summoner, summonerLeagues);
+            RedrawUserInfo(summonerLeagues);
             RedrawMatchHistory(list);
         }
 
 
-        private static void RedrawUserInfo(Summoner summoner, List<LeagueEntry> summonerLeagues)
+        private static void RedrawUserInfo(List<LeagueEntry> summonerLeagues)
         {
             SummonerInfoView.RemoveAll();
 
-            var label = new Label("Summoner Name: " + summoner.Name)
+            var label = new Label("Summoner Name: " + PlayerSummoner.Name)
             {
                 X = Pos.Percent(0),
                 Y = Pos.Percent(0),
@@ -256,7 +253,7 @@ namespace LeagueTerminal.LeagueUtils
             };
             SummonerInfoView.Add(label);
 
-            var levelLabel = new Label("Summoner level: " + summoner.Level)
+            var levelLabel = new Label("Summoner level: " + PlayerSummoner.Level)
             {
                 X = Pos.Percent(0),
                 Y = Pos.Bottom(label),
@@ -300,7 +297,7 @@ namespace LeagueTerminal.LeagueUtils
                 SummonerInfoView.Add(queueType);
             }
 
-            var masteriesArray = LeagueUtilities.GetTopPlayedChampions(Api, summoner, Champions);
+            var masteriesArray = LeagueUtilities.GetTopPlayedChampions(Api, PlayerSummoner, Champions);
 
             foreach (string mastery in masteriesArray)
             {
@@ -317,9 +314,144 @@ namespace LeagueTerminal.LeagueUtils
 
         }
 
+
         private static void RedrawMatchHistory(List<MatchHistoryElement> matchHistoryElements)
         {
             MatchHistoryListView.SetSource(matchHistoryElements);
+            MatchHistoryListView.OpenSelectedItem += RedrawMatchDetails;
+        }
+
+        private static void RedrawMatchDetails(ListViewItemEventArgs args)
+        {
+            MatchDetailsView.RemoveAll();
+            //MatchHistoryElement matchHistoryElement = (MatchHistoryElement) selectedItem;
+            var argss = args;
+            var element = (MatchHistoryElement) args.Value;
+            var match = Api.Match.GetMatchAsync(SearchRegion, element.Reference.GameId).Result;
+
+            // Get participant stats object of summoner (imaqtpie)
+            var particpantsId = match.ParticipantIdentities.Single(x => x.Player.AccountId == PlayerSummoner.AccountId);
+            var participant = match.Participants.Single(x => x.ParticipantId == particpantsId.ParticipantId);
+
+            var label = new Label("Summoner Name: " + PlayerSummoner.Name)
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Percent(0),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(label);
+
+            var startDate = new Label("Game start: " + match.GameCreation)
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(label),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(startDate);
+
+
+            var gameDuration = new Label("Game duration: " + match.GameDuration)
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(startDate),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(gameDuration);
+
+            var gameMode = new Label("Game Mode: " + match.GameMode)
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(gameDuration),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(gameMode);
+
+            string sideName = participant.TeamId == 100 ? "Blue" : "Red";
+            var side = new Label("Side: " + sideName)
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(gameMode),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(side);
+
+            var emptyLabel1 = new Label(" ")
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(side),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(emptyLabel1);
+
+
+            var championPlayed = new Label("Champion: " + Champions.Values.Single(x => x.Id == participant.ChampionId).Name)
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(emptyLabel1),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(championPlayed);
+
+            string winner = participant.Stats.Winner ? "Winner" : "Loser";
+            var resultLabel = new Label("Result: " + winner)
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(championPlayed),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(resultLabel);
+
+
+            var statsLabel = new Label("Stats")
+            {
+                X = Pos.Percent(50)-5,
+                Y = Pos.Bottom(resultLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(statsLabel);
+
+            var killsLabel = new Label( string.Format("{0,-9} {1,-9}","Kills: ", participant.Stats.Kills))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(statsLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(killsLabel);
+
+            var deathsLabel = new Label(string.Format("{0,-9} {1,-9}", "Deaths: ", participant.Stats.Deaths))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(killsLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(deathsLabel);
+
+            var assistsLabel = new Label(string.Format("{0,-9} {1,-9}", "Assists: ", participant.Stats.Assists))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(deathsLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(assistsLabel);
+
+
+
+
+
+
+
         }
 
         private static void DrawInfoDialog(string message)

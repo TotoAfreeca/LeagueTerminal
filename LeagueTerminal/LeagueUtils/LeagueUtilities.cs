@@ -11,6 +11,7 @@ namespace LeagueTerminal.LeagueUtils
 {
     public static class LeagueUtilities
     {
+
         public static string[] GetTopPlayedChampions(RiotApi api, Summoner summoner, Dictionary<string, ChampionStatic> champions )
         {
             List<ChampionMastery> championMasteries;
@@ -28,7 +29,7 @@ namespace LeagueTerminal.LeagueUtils
             {
                 var championMastery = championMasteries[i];    
                 var id = championMastery.ChampionId;
-                var name = champions.Values.Single(x => x.Id == id).Name; // using System.Linq;
+                var name = champions.Values.Single(x => x.Id == id).Name;
                 var level = championMastery.ChampionLevel;
                 var points = championMastery.ChampionPoints;
 
