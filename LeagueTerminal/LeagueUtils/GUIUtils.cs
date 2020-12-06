@@ -38,11 +38,14 @@ namespace LeagueTerminal.LeagueUtils
 
         //var latestVersion = allVersion[0]; // Example of version: "10.23.1"
         static private Dictionary<string, ChampionStatic> Champions { get; set; }
+        
 
         public static void SetupMainView(View myView)
         {
             LatestVersion = Api.DataDragon.Versions.GetAllAsync().Result[0];
             Champions = Api.DataDragon.Champions.GetAllAsync(LatestVersion).Result.Champions;
+            var itemsResult = Api.DataDragon.Items.GetAllAsync(LatestVersion).Result;
+            
             var maps = Api.DataDragon.Maps.GetAllAsync(LatestVersion).Result;
             TopView = myView;
 
@@ -446,10 +449,61 @@ namespace LeagueTerminal.LeagueUtils
             };
             MatchDetailsView.Add(assistsLabel);
 
+            //DMG DEALT
 
+            var emptyLabel2 = new Label(" ")
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(assistsLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(emptyLabel2);
 
+            var totalDamageDealtLabel = new Label("Damage dealt to champions")
+            {
+                X = Pos.Percent(50) - 14,
+                Y = Pos.Bottom(emptyLabel2),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(totalDamageDealtLabel);
 
+            var physicalLabel = new Label(string.Format("{0,-10} {1,-9}", "Physical: ", participant.Stats.PhysicalDamageDealtToChampions))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(totalDamageDealtLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(physicalLabel);
 
+            var magicLabel = new Label(string.Format("{0,-10} {1,-9}", "Magic: ", participant.Stats.MagicDamageDealtToChampions))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(physicalLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(magicLabel);
+
+            var trueDamage = new Label(string.Format("{0,-10} {1,-9}", "True: ", participant.Stats.TrueDamageDealtToChampions))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(magicLabel),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(trueDamage);
+
+            var totalDamage = new Label(string.Format("{0,-10} {1,-9}", "Total: ", participant.Stats.TotalDamageDealtToChampions))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(trueDamage),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(totalDamage);
 
 
         }
