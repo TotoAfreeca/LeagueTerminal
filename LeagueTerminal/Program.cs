@@ -19,21 +19,21 @@ namespace LeagueTerminal
             Application.Init();
             var top = Application.Top;
 
-        //    // Creates a menubar, the item "New" has a help menu.
-        //    var menu = new MenuBar(new MenuBarItem[] {
-        //    new MenuBarItem ("_File", new MenuItem [] {
-        //        new MenuItem ("_New", "Creates new file", null),
-        //        new MenuItem ("_Close", "", null),
-        //        new MenuItem ("_Quit", "", () => { top.Running = false; })
-        //    }),
-        //    new MenuBarItem ("_Edit", new MenuItem [] {
-        //        new MenuItem ("_Copy", "", null),
-        //        new MenuItem ("C_ut", "", null),
-        //        new MenuItem ("_Paste", "", null)
-        //    })
-        //});
-        //    top.Add(menu);
-           
+            //    // Creates a menubar, the item "New" has a help menu.
+            //    var menu = new MenuBar(new MenuBarItem[] {
+            //    new MenuBarItem ("_File", new MenuItem [] {
+            //        new MenuItem ("_New", "Creates new file", null),
+            //        new MenuItem ("_Close", "", null),
+            //        new MenuItem ("_Quit", "", () => { top.Running = false; })
+            //    }),
+            //    new MenuBarItem ("_Edit", new MenuItem [] {
+            //        new MenuItem ("_Copy", "", null),
+            //        new MenuItem ("C_ut", "", null),
+            //        new MenuItem ("_Paste", "", null)
+            //    })
+            //});
+            //    top.Add(menu);
+
 
             //bool okpressed = false;
             //var ok = new Button(3, 6, "OK");
@@ -96,9 +96,30 @@ namespace LeagueTerminal
 
             //    list.Add(new MatchHistoryElement(participant));
             //}
-          
 
-            GUIUtils.SetupMainView(top);
+            LeagueUtilities.SetupApi();
+
+            SummonerGUI.SetupMainView(top);
+            ItemsetGUI.SetupMainView(top);
+            top.Add(ItemsetGUI.TopViewWindow);
+            top.Add(SummonerGUI.TopViewWindow);
+
+            SummonerGUI.TopViewWindow.SetFocus();
+            // Creates a menubar, the item "New" has a help menu.
+            var menu = new MenuBar(new MenuBarItem[] {
+            new MenuBarItem ("_File", new MenuItem [] {
+                new MenuItem ("_New", "Creates new file", null),
+                new MenuItem ("Summoner Search", "", () => { top.Remove(ItemsetGUI.TopViewWindow); top.Add(SummonerGUI.TopViewWindow);}),
+                new MenuItem ("ItemSet Creator", "", () => { top.Remove(SummonerGUI.TopViewWindow); top.Add(ItemsetGUI.TopViewWindow);})
+            }),
+            new MenuBarItem ("Server", new MenuItem [] {
+                new MenuItem ("EUNE", "", () => { SummonerGUI.SetSearchRegion(Region.Eune); }),
+                new MenuItem ("EUW", "", () => { SummonerGUI.SetSearchRegion(Region.Euw); }),
+                new MenuItem ("NA", "", () => { SummonerGUI.SetSearchRegion(Region.Na); }),
+                new MenuItem ("KR", "", () => { SummonerGUI.SetSearchRegion(Region.Kr); })
+            })
+        });
+            top.Add(menu);
 
             Application.Run(top);
         }

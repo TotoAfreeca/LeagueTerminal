@@ -3,6 +3,7 @@ using RiotSharp.Endpoints.ChampionMasteryEndpoint;
 using RiotSharp.Endpoints.LeagueEndpoint;
 using RiotSharp.Endpoints.MatchEndpoint;
 using RiotSharp.Endpoints.StaticDataEndpoint.Champion;
+using RiotSharp.Endpoints.StaticDataEndpoint.Item;
 using RiotSharp.Endpoints.SummonerEndpoint;
 using RiotSharp.Misc;
 using System;
@@ -13,9 +14,10 @@ using Terminal.Gui;
 
 namespace LeagueTerminal.LeagueUtils
 {
-    class GUIUtils
+    class SummonerGUI
     {
-        static private View TopView { get; set; }
+        static public View TopView;
+        static public View TopViewWindow { get; set; }
         static private View SummonerSearchView { get; set; }
 
         static private View SummonerInfoView { get; set; }
@@ -24,9 +26,7 @@ namespace LeagueTerminal.LeagueUtils
 
 
 
-        static private RiotApi Api = RiotApi.GetDevelopmentInstance("RGAPI-277a443b-4981-4e26-bde2-dfbcf586fe0a");
 
-        static private string LatestVersion { get; set; }
         static private TextField UsernameTextField { get; set; }
 
         
@@ -37,48 +37,27 @@ namespace LeagueTerminal.LeagueUtils
         static private Region SearchRegion { get; set; }
 
         //var latestVersion = allVersion[0]; // Example of version: "10.23.1"
-        static private Dictionary<string, ChampionStatic> Champions { get; set; }
-        
 
         public static void SetupMainView(View myView)
         {
-            LatestVersion = Api.DataDragon.Versions.GetAllAsync().Result[0];
-            Champions = Api.DataDragon.Champions.GetAllAsync(LatestVersion).Result.Champions;
-            var itemsResult = Api.DataDragon.Items.GetAllAsync(LatestVersion).Result;
-            
-            var maps = Api.DataDragon.Maps.GetAllAsync(LatestVersion).Result;
+
+            Window summonerSearchWindow = new Window();
+            TopViewWindow = summonerSearchWindow;
             TopView = myView;
 
-            // Creates a menubar, the item "New" has a help menu.
-            var menu = new MenuBar(new MenuBarItem[] {
-            new MenuBarItem ("_File", new MenuItem [] {
-                new MenuItem ("_New", "Creates new file", null),
-                new MenuItem ("_Close", "", null),
-                new MenuItem ("_Quit", "", null)
-            }),
-            new MenuBarItem ("Server", new MenuItem [] {
-                new MenuItem ("EUNE", "", () => { SetSearchRegion(Region.Eune); }),
-                new MenuItem ("EUW", "", () => { SetSearchRegion(Region.Euw); }),
-                new MenuItem ("NA", "", () => { SetSearchRegion(Region.Na); }),
-                new MenuItem ("KR", "", () => { SetSearchRegion(Region.Kr); })
-            })
-        });
             SetSearchRegion(Region.Eune);
-            myView.Add(menu);
-
-
             SearchRegion = Region.Eune;
             SetupMatchHistoryView();
             SetupSummonerInfo();
             SetupMatchInfo();
             SetupSummonerSearchView();
-            myView.Add(SummonerSearchView);
-            myView.Add(SummonerInfoView);
-            myView.Add(MatchHistoryView);
-            myView.Add(MatchDetailsView);
+            TopViewWindow.Add(SummonerSearchView);
+            TopViewWindow.Add(SummonerInfoView);
+            TopViewWindow.Add(MatchHistoryView);
+            TopViewWindow.Add(MatchDetailsView);
         }
 
-        private static void SetSearchRegion(Region searchRegion)
+        public static void SetSearchRegion(Region searchRegion)
         {
             SearchRegion = searchRegion;
         }
@@ -192,7 +171,7 @@ namespace LeagueTerminal.LeagueUtils
             PlayerSummoner = null;
             try
             {
-                PlayerSummoner = Api.Summoner.GetSummonerByNameAsync(SearchRegion, UsernameTextField.Text.ToString()).Result;
+                PlayerSummoner = LeagueUtilities.Api.Summoner.GetSummonerByNameAsync(SearchRegion, UsernameTextField.Text.ToString()).Result;
             }
             catch (Exception e)
             {
@@ -201,31 +180,20 @@ namespace LeagueTerminal.LeagueUtils
             }
             
 
-            var summonerLeagues = Api.League.GetLeagueEntriesBySummonerAsync(SearchRegion, PlayerSummoner.Id).Result;
-            MatchList matchData = null;
+            var summonerLeagues = LeagueUtilities.Api.League.GetLeagueEntriesBySummonerAsync(SearchRegion, PlayerSummoner.Id).Result;
+
+            List<MatchHistoryElement> matchlist = null;
+
             try
             {
-                matchData = Api.Match.GetMatchListAsync(SearchRegion, PlayerSummoner.AccountId).Result;
+                matchlist = LeagueUtilities.GetMatchHistoryList(LeagueUtilities.Api, SearchRegion, PlayerSummoner, LeagueUtilities.Champions);
             }
-            catch(RiotSharpException e)
+            catch(Exception e)
             {
                 DrawInfoDialog("This user hasn't play any games this season.");
                 return;
             }
-            List<MatchHistoryElement> list = new List<MatchHistoryElement>();
-
-            Dictionary<Participant, string> dic = new Dictionary<Participant, string>();
-            for (int i = 0; i < 10; i++)
-            {
-
-                var matchReference = matchData.Matches[i];
-
-
-                list.Add(new MatchHistoryElement(matchReference, Champions));
-
-                // Do stuff with stats
-
-            }
+            
 
             //List<ChampionMastery> championMasteries;
             //try
@@ -239,7 +207,7 @@ namespace LeagueTerminal.LeagueUtils
             //}
 
             RedrawUserInfo(summonerLeagues);
-            RedrawMatchHistory(list);
+            RedrawMatchHistory(matchlist);
         }
 
 
@@ -300,7 +268,7 @@ namespace LeagueTerminal.LeagueUtils
                 SummonerInfoView.Add(queueType);
             }
 
-            var masteriesArray = LeagueUtilities.GetTopPlayedChampions(Api, PlayerSummoner, Champions);
+            var masteriesArray = LeagueUtilities.GetTopPlayedChampions(PlayerSummoner);
 
             foreach (string mastery in masteriesArray)
             {
@@ -330,7 +298,7 @@ namespace LeagueTerminal.LeagueUtils
             //MatchHistoryElement matchHistoryElement = (MatchHistoryElement) selectedItem;
             var argss = args;
             var element = (MatchHistoryElement) args.Value;
-            var match = Api.Match.GetMatchAsync(SearchRegion, element.Reference.GameId).Result;
+            var match = LeagueUtilities.Api.Match.GetMatchAsync(SearchRegion, element.Reference.GameId).Result;
 
             // Get participant stats object of summoner (imaqtpie)
             var particpantsId = match.ParticipantIdentities.Single(x => x.Player.AccountId == PlayerSummoner.AccountId);
@@ -393,7 +361,7 @@ namespace LeagueTerminal.LeagueUtils
             MatchDetailsView.Add(emptyLabel1);
 
 
-            var championPlayed = new Label("Champion: " + Champions.Values.Single(x => x.Id == participant.ChampionId).Name)
+            var championPlayed = new Label("Champion: " + LeagueUtilities.Champions.Values.Single(x => x.Id == participant.ChampionId).Name)
             {
                 X = Pos.Percent(0),
                 Y = Pos.Bottom(emptyLabel1),
@@ -505,6 +473,101 @@ namespace LeagueTerminal.LeagueUtils
             };
             MatchDetailsView.Add(totalDamage);
 
+            //final build
+
+            var emptyLabel3 = new Label(" ")
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(totalDamage),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(emptyLabel3);
+
+            var items = new Label(string.Format("    {0}", "Final Build"))
+            {
+                X = Pos.Percent(50) - 14,
+                Y = Pos.Bottom(emptyLabel3),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(items);
+
+            string item0 = LeagueUtilities.Items.ContainsKey((int)participant.Stats.Item0) ? LeagueUtilities.Items[(int)participant.Stats.Item0].Name : "None";
+            var item0label = new Label(string.Format("• {0}", item0))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(items),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(item0label);
+
+
+            string item1 = LeagueUtilities.Items.ContainsKey((int)participant.Stats.Item1) ? LeagueUtilities.Items[(int)participant.Stats.Item1].Name : "None";
+            var item1label = new Label(string.Format("• {0}", item1))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(item0label),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(item1label);
+
+
+            string item2 = LeagueUtilities.Items.ContainsKey((int)participant.Stats.Item2) ? LeagueUtilities.Items[(int)participant.Stats.Item2].Name : "None";
+            var item2label = new Label(string.Format("• {0}", item2))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(item1label),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(item2label);
+
+
+            string item3 = LeagueUtilities.Items.ContainsKey((int)participant.Stats.Item3) ? LeagueUtilities.Items[(int)participant.Stats.Item3].Name : "None";
+            var item3label = new Label(string.Format("• {0}", item3))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(item2label),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(item3label);
+
+
+            string item4 = LeagueUtilities.Items.ContainsKey((int)participant.Stats.Item4) ? LeagueUtilities.Items[(int)participant.Stats.Item4].Name : "None";
+            var item4label = new Label(string.Format("• {0}", item4))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(item3label),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(item4label);
+
+
+            string item5 = LeagueUtilities.Items.ContainsKey((int)participant.Stats.Item5) ? LeagueUtilities.Items[(int)participant.Stats.Item5].Name : "None";
+            var item5label = new Label(string.Format("• {0}", item5))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(item4label),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(item5label);
+
+
+            string item6 = LeagueUtilities.Items.ContainsKey((int)participant.Stats.Item6) ? LeagueUtilities.Items[(int)participant.Stats.Item6].Name + " (trinket)" : "None";
+            var item6label = new Label(string.Format("• {0}", item6))
+            {
+                X = Pos.Percent(0),
+                Y = Pos.Bottom(item5label),
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            MatchDetailsView.Add(item6label);
 
         }
 
