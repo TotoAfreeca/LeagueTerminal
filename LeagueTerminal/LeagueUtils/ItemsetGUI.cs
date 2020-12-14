@@ -36,7 +36,7 @@ namespace LeagueTerminal.LeagueUtils
         static private List<ItemListElement>[] BlockLists { get; set; }
 
         static private int SelectedBlockId { get; set; }
-
+        static private int SelectedFiltering { get; set; }
         static private TextField ItemName { get; set; }
         static private View ItemDetailsView { get; set; }
 
@@ -101,10 +101,10 @@ namespace LeagueTerminal.LeagueUtils
                 Height = 1
             };
 
-
+            ItemName.TextChanged += ItemName_TextChanged;
             summonerSearchInfoWindow.Add(ItemName);
 
-            NStack.ustring[] elo = new NStack.ustring[] { "Armor   ", "Damage   ", "SpellDamage   ", "AttackSpeed   " };
+            NStack.ustring[] elo = new NStack.ustring[] {"All   ", "Armor   ", "Damage   ", "SpellDamage   ", "AttackSpeed   ", "Health   ", "Mana   "};
             RadioGroup test = new RadioGroup(elo)
             {
                 X = Pos.Right(ItemName)+5,
@@ -112,6 +112,7 @@ namespace LeagueTerminal.LeagueUtils
                 Width = 40,
                 Height = 1
             };
+            SelectedFiltering = 0;
             test.DisplayMode = DisplayModeLayout.Horizontal;
             test.SelectedItemChanged += FilterItemList;
             TagsRadio = test;
@@ -119,10 +120,16 @@ namespace LeagueTerminal.LeagueUtils
             SummonerSearchView = summonerSearchInfoWindow;
         }
 
+        private static void ItemName_TextChanged(NStack.ustring obj)
+        {
+            ItemListView.SetSource(LeagueUtilities.GetItemListByTagAndName(TagsRadio.RadioLabels[SelectedFiltering].ToString(), ItemName.Text.ToString()));
+        }
+
         private static void FilterItemList(RadioGroup.SelectedItemChangedArgs obj)
         {
+            SelectedFiltering = obj.SelectedItem;    
 
-            ItemListView.SetSource(LeagueUtilities.GetItemListByTag(TagsRadio.RadioLabels[obj.SelectedItem].ToString()));
+            ItemListView.SetSource(LeagueUtilities.GetItemListByTagAndName(TagsRadio.RadioLabels[obj.SelectedItem].ToString(), ItemName.Text.ToString()));
         }
 
         private static void SetupChampionList()
@@ -427,6 +434,33 @@ namespace LeagueTerminal.LeagueUtils
             entry.Text = message;
             var dialog = new Dialog("Success", 60, 7, ok);
             dialog.Add(entry);
+            Application.Run(dialog);
+        }
+
+        private static void DrawExportInfoDialog(string message, string jsonText)
+        {
+
+            var ok = new Button("Ok");
+            var entry = new Label(message)
+            {
+                X = 1,
+                Y = 1,
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            ok.Clicked += () => { Application.RequestStop(); };
+            entry.Text = message;
+            var text = new TextField(jsonText)
+            {
+                X = 1,
+                Y = 1,
+                Width = Dim.Fill(),
+                Height = 3
+            };
+
+            var dialog = new Dialog("Success", 60, 7, ok);
+            dialog.Add(entry);
+            dialog.Add(text);
             Application.Run(dialog);
         }
 

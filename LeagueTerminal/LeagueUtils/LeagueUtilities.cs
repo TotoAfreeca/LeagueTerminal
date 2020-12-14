@@ -15,7 +15,7 @@ namespace LeagueTerminal.LeagueUtils
     public static class LeagueUtilities
     {
 
-        static public RiotApi Api = RiotApi.GetDevelopmentInstance("RGAPI-0cc43c67-4700-4ae7-8313-7ff40260f101");
+        static public RiotApi Api = RiotApi.GetDevelopmentInstance("RGAPI-57cc0015-230f-449b-810d-462f9eccdc7d");
         static private string LatestVersion { get; set; }
         static public Dictionary<string, ChampionStatic> Champions { get; set; }
 
@@ -103,12 +103,16 @@ namespace LeagueTerminal.LeagueUtils
             return itemListElements;
         }
 
-        public static List<ItemListElement> GetItemListByTag(string tag)
+        public static List<ItemListElement> GetItemListByTagAndName(string tag, string name)
         {
             List<ItemListElement> itemListElements = new List<ItemListElement>();
 
+            if (tag.Trim() == "All")
+                foreach (ItemStatic item in Items.Values)
+                    if (item.Name.Contains(name, StringComparison.InvariantCultureIgnoreCase))
+                        itemListElements.Add(new ItemListElement(item));
             foreach (ItemStatic item in Items.Values)
-                if(item.Tags.Contains(tag.Trim()))
+                if(item.Tags.Contains(tag.Trim()) && item.Name.Contains(name, StringComparison.InvariantCultureIgnoreCase))
                     itemListElements.Add(new ItemListElement(item));
 
             return itemListElements;
