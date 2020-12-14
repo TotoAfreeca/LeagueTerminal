@@ -393,7 +393,7 @@ namespace LeagueTerminal.LeagueUtils
             }
             
             JsonSerializer serializer = new JsonSerializer();
-            using (StreamWriter sw = new StreamWriter("ExportedFile.txt"))
+            using (StreamWriter sw = new StreamWriter("ExportedFile.json"))
             {
                 using(JsonWriter writer = new JsonTextWriter(sw))
                 {

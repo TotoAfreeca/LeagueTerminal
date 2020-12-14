@@ -28,11 +28,6 @@ namespace LeagueTerminal.LeagueUtils
             Champions = Api.DataDragon.Champions.GetAllAsync(LatestVersion).Result.Champions;
             Items = Api.DataDragon.Items.GetAllAsync(LatestVersion).Result.Items;
             ItemTags = GetItemTags();
-
-            //Armor
-            //Damage
-            //SpellDamage
-            //AttackSpeed
         }
 
         public static string[] GetTopPlayedChampions(Summoner summoner)
@@ -109,10 +104,10 @@ namespace LeagueTerminal.LeagueUtils
 
             if (tag.Trim() == "All")
                 foreach (ItemStatic item in Items.Values)
-                    if (item.Name.Contains(name, StringComparison.InvariantCultureIgnoreCase))
+                    if (item.Name.Contains(name.Trim(), StringComparison.InvariantCultureIgnoreCase))
                         itemListElements.Add(new ItemListElement(item));
             foreach (ItemStatic item in Items.Values)
-                if(item.Tags.Contains(tag.Trim()) && item.Name.Contains(name, StringComparison.InvariantCultureIgnoreCase))
+                if(item.Tags.Contains(tag.Trim()) && item.Name.Contains(name.Trim(), StringComparison.InvariantCultureIgnoreCase))
                     itemListElements.Add(new ItemListElement(item));
 
             return itemListElements;
