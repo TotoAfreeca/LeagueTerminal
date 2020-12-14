@@ -14,6 +14,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Terminal.Gui;
 using RegMatch = System.Text.RegularExpressions.Match;
+using Newtonsoft.Json;
+using LeagueTerminal.ItemSetClasses;
+using System.IO;
 
 namespace LeagueTerminal.LeagueUtils
 {
@@ -24,6 +27,7 @@ namespace LeagueTerminal.LeagueUtils
         static private View SummonerSearchView { get; set; }
 
         static private View ChampionsView { get; set; }
+        static private ListView ChampionsListView { get; set; }
         static private View ItemListWindow { get; set; }
         static private ListView ItemListView { get; set; }
         static private View ItemSetView { get; set; }
@@ -145,15 +149,10 @@ namespace LeagueTerminal.LeagueUtils
             championsListView.AllowsMultipleSelection = true ;
             championsListView.AllowsMarking = true;
             championsListView.SetSource(LeagueUtilities.GetChampionListElements());
+            ChampionsListView = championsListView;
             ChampionsView.Add(championsListView);
 
-            //for (int i = 0; i < championsListView.Source.Count-1; i++)
-            //{
-            //    if (championsListView.Source.IsMarked(i))
-            //    {
-            //        championsListView.Source.ToList()[i]
-            //    }
-            //}
+
             
 
         }
@@ -260,7 +259,7 @@ namespace LeagueTerminal.LeagueUtils
                 Y = Pos.Bottom(blockRadio),
 
                 Width = Dim.Percent(50),
-                Height = Dim.Percent(50)
+                Height = Dim.Percent(45)
             };
             var blockListView1 = new ListView()
             {
@@ -279,7 +278,7 @@ namespace LeagueTerminal.LeagueUtils
                 Y = Pos.Bottom(blockRadio),
 
                 Width = Dim.Fill(),
-                Height = Dim.Percent(50)
+                Height = Dim.Percent(45)
             };
 
             var blockListView2 = new ListView()
@@ -346,6 +345,89 @@ namespace LeagueTerminal.LeagueUtils
             Blocks[2].OpenSelectedItem += Block2openSelectedItem;
             Blocks[3].OpenSelectedItem += Block3openSelectedItem;
 
+
+            var exportButton = new Button("Export")
+            {
+                X = Pos.Center(),
+                Y = Pos.Bottom(blockFrameView3)
+            };
+            exportButton.Clicked += ExportButton_Clicked;
+            ItemSetView.Add(exportButton);
+        }
+
+        private static void ExportButton_Clicked()
+        {
+            Root root = new Root();
+
+            ItemArray array = new ItemArray();
+            root.associatedChampions = GetMarkedChampions();
+            root.associatedMaps = new List<int>() { 11 };
+            root.title = "TerminalSet";
+
+            root.blocks = new List<Block>();
+            for (int i =0;i< 4;i++)
+            {
+                Block block = new Block();
+                block.hideIfSummonerSpell = "";
+                block.type = $"Block {i+1}";
+                block.showIfSummonerSpell = "";
+
+                List<Item> itemlist = new List<Item>();
+                foreach(var item in BlockLists[i])
+                {
+                    itemlist.Add(new Item()
+                    {
+                        count = 1,
+                        id = item.Item.Id.ToString()
+                    });
+                }
+                block.items = itemlist;
+                root.blocks.Add(block);
+            }
+            
+            JsonSerializer serializer = new JsonSerializer();
+            using (StreamWriter sw = new StreamWriter("ExportedFile.txt"))
+            {
+                using(JsonWriter writer = new JsonTextWriter(sw))
+                {
+                    serializer.Serialize(writer, root);
+                }
+            }
+
+            DrawInfoDialog("Itemset was successfully exported.");
+        }
+
+
+        private static List<int> GetMarkedChampions()
+        {
+            List<int> markedChampions = new List<int>();
+            for (int i = 0; i < ChampionsListView.Source.Count - 1; i++)
+            {
+                if (ChampionsListView.Source.IsMarked(i))
+                {
+                    var champEle = (ChampionListElement)ChampionsListView.Source.ToList()[i];
+                    markedChampions.Add(champEle.Champion.Id);
+                }
+            }
+            return markedChampions;
+        }
+
+        private static void DrawInfoDialog(string message)
+        {
+
+            var ok = new Button("Ok");
+            var entry = new Label(message)
+            {
+                X = 1,
+                Y = 1,
+                Width = Dim.Fill(),
+                Height = 1
+            };
+            ok.Clicked += () => { Application.RequestStop(); };
+            entry.Text = message;
+            var dialog = new Dialog("Success", 60, 7, ok);
+            dialog.Add(entry);
+            Application.Run(dialog);
         }
 
         private static void Block0openSelectedItem(ListViewItemEventArgs obj)
@@ -460,22 +542,5 @@ namespace LeagueTerminal.LeagueUtils
             //SummonerInfoView.Add(queue);
         }
 
-        private static void DrawInfoDialog(string message)
-        {
-
-            var ok = new Button("Ok");
-            var entry = new TextField()
-            {
-                X = 1,
-                Y = 1,
-                Width = Dim.Fill(),
-                Height = 1
-            };
-            ok.Clicked += () => { Application.RequestStop(); };
-            entry.Text = message;
-            var dialog = new Dialog("Error", 60, 7, ok);
-            dialog.Add(entry);
-            Application.Run(dialog);
-        }
     }
 }

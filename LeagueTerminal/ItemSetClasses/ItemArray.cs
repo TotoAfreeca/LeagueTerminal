@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace LeagueTerminal.ItemSetClasses
-{    public class Item
+{
+    public class ItemArray
     {
-        public string id { get; set; }
-        public int count { get; set; }
+
 
     }
 }
